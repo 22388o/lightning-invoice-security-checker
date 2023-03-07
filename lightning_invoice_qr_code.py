@@ -1,11 +1,11 @@
 import io
-import zbarlight
-import qrcode
 import os
-from PIL import Image
-from pyln.client import LightningRpc
 import hashlib
 import requests
+import qrcode
+from PIL import Image
+from pyzbar.pyzbar import decode as decode_qr
+from pyln.client import LightningRpc
 
 
 def prompt_for_rpc_path():
@@ -38,8 +38,8 @@ def decode_qr_code():
         image = Image.open(io.BytesIO(image_file.read()))
         image.load()
 
-    codes = zbarlight.scan_codes('qrcode', image)
-    invoice = codes[0].decode('utf-8')
+    codes = decode_qr(image)
+    invoice = codes[0].data.decode('utf-8')
 
     return invoice
 

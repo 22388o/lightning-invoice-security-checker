@@ -1,4 +1,4 @@
-# lightning-invoice-security-checker
+# ZeeBeeGuard: Lightning Invoice Security Checker
 
 This is a Python script that allows a user to input a Lightning invoice, generate a QR code for it, and then scan the QR code to decode the invoice. It also includes a function to check the validity of the invoice, using the pyln client library to interact with a Lightning node's RPC server.
 
