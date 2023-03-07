@@ -1,24 +1,22 @@
 import io
+import pyzbar.pyzbar as pyzbar
+import qrcode
 import os
+from PIL import Image
+from pyln.client import LightningRpc
 import hashlib
 import requests
-import qrcode
-from PIL import Image
-from pyzbar.pyzbar import decode as decode_qr
-from pyln.client import LightningRpc
 
 
 def prompt_for_rpc_path():
     rpc_path = input("Enter path to your lightning-rpc: ")
     if not os.path.isfile(rpc_path):
-        print("Error: File path is not valid")
-        exit()
+        raise ValueError("Error: File path is not valid")
 
     try:
         rpc = LightningRpc(rpc_path)
     except:
-        print("Error: Unable to connect to RPC server")
-        exit()
+        raise ConnectionError("Error: Unable to connect to RPC server")
 
     return rpc
 
@@ -29,7 +27,9 @@ def generate_qr_code(invoice):
     qr.add_data(invoice)
     qr.make(fit=True)
     img = qr.make_image(fill_color="black", back_color="white")
-    img.show()
+    img_path = input("Enter file path to save QR code image: ")
+    img.save(img_path)
+    print("QR code image saved to:", img_path)
 
 
 def decode_qr_code():
@@ -38,7 +38,7 @@ def decode_qr_code():
         image = Image.open(io.BytesIO(image_file.read()))
         image.load()
 
-    codes = decode_qr(image)
+    codes = pyzbar.decode(image)
     invoice = codes[0].data.decode('utf-8')
 
     return invoice
