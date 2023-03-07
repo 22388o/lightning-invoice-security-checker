@@ -8,15 +8,23 @@ import hashlib
 import requests
 
 
+class InvalidFileError(Exception):
+    pass
+
+
+class RpcConnectionError(Exception):
+    pass
+
+
 def prompt_for_rpc_path():
     rpc_path = input("Enter path to your lightning-rpc: ")
     if not os.path.isfile(rpc_path):
-        raise ValueError("Error: File path is not valid")
+        raise InvalidFileError("File path is not valid")
 
     try:
         rpc = LightningRpc(rpc_path)
     except:
-        raise ConnectionError("Error: Unable to connect to RPC server")
+        raise RpcConnectionError("Unable to connect to RPC server")
 
     return rpc
 
@@ -45,15 +53,17 @@ def decode_qr_code():
 
 
 def check_payment_details(invoice, rpc):
-    amount = invoice['msatoshi'] / 1000
-    description = invoice['description']
-    payment_hash = invoice['payment_hash']
-    payee_node_id = invoice['payee_node_id']
+    payment_details = rpc.decodepay(invoice)
+
+    amount = payment_details['msatoshi'] / 1000
+    description = payment_details['description']
+    payment_hash = payment_details['payment_hash']
+    payee_node_id = payment_details['payee_node_id']
 
     if amount <= 0:
         return "Invalid payment amount"
     if "hack" in description.lower() or "malicious" in description.lower():
-        return "Malicious description"
+        return "Malicious invoice description"
 
     decoded = rpc.decodepay(invoice['bolt11'])
     if decoded['payment_hash'] != payment_hash:
@@ -72,30 +82,31 @@ def check_payment_details(invoice, rpc):
     if expiry <= 0:
         return "Invoice has expired"
 
-    payment_preimage = decoded['payment_preimage']
-    if not payment_preimage:
+    if not decoded['payment_preimage']:
         return "Invalid payment preimage"
 
     if decoded['description_hash'] is not None:
-        covered_invoice_hash = hashlib.sha256(
-            decoded['description_hash'].encode()).hexdigest()
-        covered_invoice = rpc.listinvoices(covered_invoice_hash)
-        if len(covered_invoice['invoices']) > 0:
-            return "Invoice covers another invoice"
+        return "Invoice covers another invoice"
 
     return "Invoice is valid"
 
 
 def main():
-    rpc = prompt_for_rpc_path()
+    try:
+        rpc = prompt_for_rpc_path()
+    except InvalidFileError as e:
+        print("Error: ", e)
+        return
+    except RpcConnectionError as e:
+        print("Error: ", e)
+        return
 
     invoice = input("Enter Lightning invoice: ")
     generate_qr_code(invoice)
 
     invoice = decode_qr_code()
 
-    payment_details = rpc.decodepay(invoice)
-    result = check_payment_details(payment_details, rpc)
+    result = check_payment_details(invoice, rpc)
     print(result)
 
 
