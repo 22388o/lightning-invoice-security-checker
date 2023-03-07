@@ -39,12 +39,10 @@ def check_invoice(invoice):
         return "Invalid payment hash"
 
     # check that the payee's node ID is valid
-    try:
-        r = requests.get("https://1ml.com/node/" + payee_node_id)
+    with requests.Session() as session:
+        r = session.get("https://1ml.com/node/" + payee_node_id)
         if r.status_code != 200:
             return "Invalid payee node ID"
-    except:
-        return "Error checking payee node ID"
 
     # check that the invoice has not already been paid
     payment_status = rpc.listinvoices(payment_hash)['invoices'][0]['status']
